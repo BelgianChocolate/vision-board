@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -14,10 +14,12 @@ export function AuthPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  if (session) {
-    navigate('/board', { replace: true })
-    return null
-  }
+  // Redirect in effect, not during render
+  useEffect(() => {
+    if (session) navigate('/board', { replace: true })
+  }, [session, navigate])
+
+  if (session) return null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

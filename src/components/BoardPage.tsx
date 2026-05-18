@@ -10,8 +10,18 @@ import type { Timeframe } from '../lib/types'
 
 export function BoardPage() {
   const { session } = useAuth()
-  const userId = session!.user.id
   const [timeframe, setTimeframe] = useState<Timeframe>('1year')
+
+  // session resolves asynchronously — wait for it before rendering
+  if (!session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  const userId = session.user.id
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
 
   const {
