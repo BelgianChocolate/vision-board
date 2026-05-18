@@ -30,9 +30,28 @@ export interface ActionItem {
 export interface Database {
   public: {
     Tables: {
-      categories: { Row: Category; Insert: Omit<Category, 'id'>; Update: Partial<Omit<Category, 'id'>> }
-      goals: { Row: Goal; Insert: Omit<Goal, 'id' | 'created_at'>; Update: Partial<Omit<Goal, 'id' | 'created_at'>> }
-      action_items: { Row: ActionItem; Insert: Omit<ActionItem, 'id'>; Update: Partial<Omit<ActionItem, 'id'>> }
+      categories: {
+        Row: Category
+        Insert: { user_id: string; name: string; is_default: boolean; order: number }
+        Update: { user_id?: string; name?: string; is_default?: boolean; order?: number }
+        Relationships: []
+      }
+      goals: {
+        Row: Goal
+        Insert: { user_id: string; category_id: string; title: string; timeframe: Timeframe; image_url?: string | null; order?: number }
+        Update: { user_id?: string; category_id?: string; title?: string; timeframe?: Timeframe; image_url?: string | null; order?: number }
+        Relationships: []
+      }
+      action_items: {
+        Row: ActionItem
+        Insert: { goal_id: string; title: string; completed?: boolean; order?: number }
+        Update: { goal_id?: string; title?: string; completed?: boolean; order?: number }
+        Relationships: []
+      }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
   }
 }
