@@ -11,18 +11,10 @@ import type { Timeframe } from '../lib/types'
 export function BoardPage() {
   const { session } = useAuth()
   const [timeframe, setTimeframe] = useState<Timeframe>('1year')
-
-  // session resolves asynchronously — wait for it before rendering
-  if (!session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  const userId = session.user.id
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
+
+  // Use empty string when session not yet resolved — hooks must always be called unconditionally
+  const userId = session?.user.id ?? ''
 
   const {
     categories,
@@ -37,19 +29,20 @@ export function BoardPage() {
 
   const { goals, addGoal, updateGoal, deleteGoal } = useGoals(userId, resolvedCategoryId, timeframe)
 
-  function hasGoals(categoryId: string) {
-    return goals.some(g => g.category_id === categoryId)
-  }
-
-  const activeCategoryName = categories.find(c => c.id === resolvedCategoryId)?.name ?? ''
-
-  if (catsLoading) {
+  // ALL early returns AFTER all hook calls
+  if (!session || catsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
       </div>
     )
   }
+
+  function hasGoals(categoryId: string) {
+    return goals.some(g => g.category_id === categoryId)
+  }
+
+  const activeCategoryName = categories.find(c => c.id === resolvedCategoryId)?.name ?? ''
 
   return (
     <div className="min-h-screen bg-slate-50">
