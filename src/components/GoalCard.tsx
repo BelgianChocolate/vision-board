@@ -44,36 +44,68 @@ export function GoalCard({
     setEditingTitle(false)
   }
 
-  const bgStyle = goal.image_url
-    ? { backgroundImage: `url(${goal.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : { background: 'linear-gradient(135deg, #3f3f46 0%, #18181b 100%)' }
+  const hasImage = Boolean(goal.image_url)
 
   // ── Collapsed card ──
   if (!isExpanded) {
+    if (hasImage) {
+      // Photo card — full-bleed image
+      return (
+        <div
+          onClick={onToggleExpand}
+          className="goal-card relative aspect-square rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+          style={{ backgroundImage: `url(${goal.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+
+          {categoryChipLabel && categoryChipColor && (
+            <span
+              className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[9px] font-black leading-none"
+              style={{ background: categoryChipColor + 'cc', color: '#fff', backdropFilter: 'blur(4px)' }}
+            >
+              {categoryChipLabel}
+            </span>
+          )}
+
+          <p className="absolute bottom-3 left-3 right-3 text-white font-semibold text-sm leading-tight">
+            {goal.title}
+          </p>
+        </div>
+      )
+    }
+
+    // Text-only card — clean flat look, camera hint on hover
     return (
       <div
         onClick={onToggleExpand}
-        className="goal-card relative aspect-square rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
-        style={bgStyle}
+        className="goal-card relative aspect-square rounded-2xl overflow-hidden cursor-pointer
+                   bg-zinc-800 border border-white/[0.08]
+                   hover:border-orange-500/40 hover:bg-zinc-700/80
+                   transition-all duration-200 group flex flex-col justify-between p-4"
       >
-        {uploading && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        {/* Camera hint — visible on hover */}
+        <div className="flex items-center justify-center flex-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex flex-col items-center gap-1.5 text-zinc-500 group-hover:text-orange-400 transition-colors">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span className="text-[10px] font-semibold">Add photo</span>
           </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+        </div>
 
-        {/* Category chip — only shown in All view */}
+        {/* Category chip */}
         {categoryChipLabel && categoryChipColor && (
           <span
-            className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[9px] font-black leading-none"
-            style={{ background: categoryChipColor + 'cc', color: '#fff', backdropFilter: 'blur(4px)' }}
+            className="absolute top-3 right-3 px-1.5 py-0.5 rounded-md text-[9px] font-black leading-none"
+            style={{ background: categoryChipColor + 'cc', color: '#fff' }}
           >
             {categoryChipLabel}
           </span>
         )}
 
-        <p className="absolute bottom-3 left-3 right-3 text-white font-semibold text-sm leading-tight">
+        {/* Title — always at bottom */}
+        <p className="text-white font-semibold text-sm leading-snug mt-auto">
           {goal.title}
         </p>
       </div>
@@ -83,25 +115,80 @@ export function GoalCard({
   // ── Expanded card ──
   return (
     <div className="goal-card rounded-2xl overflow-hidden border border-white/[0.08] shadow-xl bg-zinc-800 col-span-full">
-      {/* Image strip */}
-      <div
-        onClick={onToggleExpand}
-        className="relative h-32 cursor-pointer"
-        style={bgStyle}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-        <button
-          onClick={e => { e.stopPropagation(); onToggleExpand() }}
-          className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-white/40"
+
+      {/* Image zone — upload area when no image, photo strip when has image */}
+      {hasImage ? (
+        // Existing image — show strip, camera overlay on hover to change
+        <div
+          className="relative h-40 cursor-pointer group"
+          style={{ backgroundImage: `url(${goal.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+          onClick={onToggleExpand}
         >
-          ✕
-        </button>
-        {uploading && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-      </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+
+          {/* Change photo overlay — appears on hover */}
+          <button
+            onClick={e => { e.stopPropagation(); fileRef.current?.click() }}
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1.5
+                       bg-black/0 hover:bg-black/40 transition-colors
+                       text-transparent hover:text-white"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span className="text-xs font-semibold">Change photo</span>
+          </button>
+
+          {/* Close button */}
+          <button
+            onClick={e => { e.stopPropagation(); onToggleExpand() }}
+            className="absolute top-2 right-2 z-10 bg-white/20 backdrop-blur-sm text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-white/40"
+          >
+            ✕
+          </button>
+
+          {uploading && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+      ) : (
+        // No image — big dashed upload area
+        <div className="relative">
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="w-full h-36 flex flex-col items-center justify-center gap-2
+                       border-b border-dashed border-white/[0.12]
+                       text-zinc-600 hover:text-orange-400
+                       hover:bg-orange-500/[0.04]
+                       transition-colors group/upload"
+            disabled={uploading}
+          >
+            {uploading ? (
+              <div className="w-8 h-8 border-2 border-zinc-600 border-t-orange-500 rounded-full animate-spin" />
+            ) : (
+              <>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+                <span className="text-sm font-medium">Add a photo</span>
+                <span className="text-xs text-zinc-700 group-hover/upload:text-zinc-500">JPG, PNG or WebP</span>
+              </>
+            )}
+          </button>
+
+          {/* Close button */}
+          <button
+            onClick={onToggleExpand}
+            className="absolute top-2 right-2 bg-white/[0.06] text-zinc-400 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-white/[0.12] hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Title + menu */}
       <div className="flex items-start justify-between px-4 pt-3 pb-1">
@@ -146,7 +233,7 @@ export function GoalCard({
                   className="w-full text-left px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
                   onClick={() => { fileRef.current?.click(); setMenuOpen(false) }}
                 >
-                  Change image
+                  {hasImage ? 'Change photo' : 'Add photo'}
                 </button>
                 <button
                   className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/30"
