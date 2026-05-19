@@ -11,9 +11,14 @@ interface GoalCardProps {
   onUpdate: (patch: Partial<Pick<Goal, 'title' | 'image_url'>>) => void
   onDelete: () => void
   userId: string
+  categoryChipLabel?: string
+  categoryChipColor?: string
 }
 
-export function GoalCard({ goal, isExpanded, onToggleExpand, onUpdate, onDelete, userId }: GoalCardProps) {
+export function GoalCard({
+  goal, isExpanded, onToggleExpand, onUpdate, onDelete, userId,
+  categoryChipLabel, categoryChipColor,
+}: GoalCardProps) {
   const { items, addItem, toggleItem, renameItem, deleteItem } = useActionItems(isExpanded ? goal.id : null)
   const [uploading, setUploading] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -41,13 +46,14 @@ export function GoalCard({ goal, isExpanded, onToggleExpand, onUpdate, onDelete,
 
   const bgStyle = goal.image_url
     ? { backgroundImage: `url(${goal.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }
+    : { background: 'linear-gradient(135deg, #3f3f46 0%, #18181b 100%)' }
 
+  // ── Collapsed card ──
   if (!isExpanded) {
     return (
       <div
         onClick={onToggleExpand}
-        className="relative aspect-square rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+        className="goal-card relative aspect-square rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
         style={bgStyle}
       >
         {uploading && (
@@ -56,6 +62,17 @@ export function GoalCard({ goal, isExpanded, onToggleExpand, onUpdate, onDelete,
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+
+        {/* Category chip — only shown in All view */}
+        {categoryChipLabel && categoryChipColor && (
+          <span
+            className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[9px] font-black leading-none"
+            style={{ background: categoryChipColor + 'cc', color: '#fff', backdropFilter: 'blur(4px)' }}
+          >
+            {categoryChipLabel}
+          </span>
+        )}
+
         <p className="absolute bottom-3 left-3 right-3 text-white font-semibold text-sm leading-tight">
           {goal.title}
         </p>
@@ -63,8 +80,9 @@ export function GoalCard({ goal, isExpanded, onToggleExpand, onUpdate, onDelete,
     )
   }
 
+  // ── Expanded card ──
   return (
-    <div className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm bg-white col-span-full">
+    <div className="goal-card rounded-2xl overflow-hidden border border-white/[0.08] shadow-xl bg-zinc-800 col-span-full">
       {/* Image strip */}
       <div
         onClick={onToggleExpand}
@@ -90,7 +108,7 @@ export function GoalCard({ goal, isExpanded, onToggleExpand, onUpdate, onDelete,
         {editingTitle ? (
           <input
             autoFocus
-            className="flex-1 font-semibold text-slate-900 outline-none border-b border-slate-300 mr-2"
+            className="flex-1 font-semibold text-white outline-none border-b border-white/20 bg-transparent mr-2"
             value={titleDraft}
             onChange={e => setTitleDraft(e.target.value)}
             onBlur={confirmTitle}
@@ -101,7 +119,7 @@ export function GoalCard({ goal, isExpanded, onToggleExpand, onUpdate, onDelete,
           />
         ) : (
           <h3
-            className="flex-1 font-semibold text-slate-900 cursor-text mr-2"
+            className="flex-1 font-semibold text-white cursor-text mr-2"
             onClick={() => setEditingTitle(true)}
           >
             {goal.title}
@@ -110,28 +128,28 @@ export function GoalCard({ goal, isExpanded, onToggleExpand, onUpdate, onDelete,
         <div className="relative">
           <button
             onClick={() => setMenuOpen(v => !v)}
-            className="text-slate-400 hover:text-slate-600 text-lg leading-none px-1"
+            className="text-zinc-500 hover:text-white text-lg leading-none px-1 transition-colors"
           >
             ⋯
           </button>
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-6 z-20 bg-white rounded-lg shadow-lg border border-slate-100 py-1 min-w-[140px]">
+              <div className="absolute right-0 top-6 z-20 bg-zinc-800 rounded-lg shadow-xl border border-white/[0.08] py-1 min-w-[140px]">
                 <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+                  className="w-full text-left px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
                   onClick={() => { setEditingTitle(true); setMenuOpen(false) }}
                 >
                   Edit title
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+                  className="w-full text-left px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
                   onClick={() => { fileRef.current?.click(); setMenuOpen(false) }}
                 >
                   Change image
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/30"
                   onClick={() => { onDelete(); setMenuOpen(false) }}
                 >
                   Delete goal

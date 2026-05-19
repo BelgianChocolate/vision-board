@@ -39,12 +39,12 @@ export function ActionItemsList({ items, onAdd, onToggle, onRename, onDelete }: 
             type="checkbox"
             checked={item.completed}
             onChange={e => onToggle(item.id, e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 accent-slate-800 cursor-pointer"
+            className="h-4 w-4 rounded border-zinc-600 accent-orange-500 cursor-pointer"
           />
           {editingId === item.id ? (
             <input
               autoFocus
-              className="flex-1 text-sm outline-none border-b border-slate-300"
+              className="flex-1 text-sm outline-none border-b border-white/20 bg-transparent text-white"
               value={editValue}
               onChange={e => setEditValue(e.target.value)}
               onBlur={() => confirmEdit(item.id)}
@@ -56,8 +56,8 @@ export function ActionItemsList({ items, onAdd, onToggle, onRename, onDelete }: 
           ) : (
             <span
               onClick={() => startEdit(item)}
-              className={`flex-1 text-sm cursor-text select-none ${
-                item.completed ? 'line-through text-slate-400' : 'text-slate-700'
+              className={`flex-1 text-sm cursor-text select-none transition-colors ${
+                item.completed ? 'line-through text-zinc-600' : 'text-zinc-200'
               }`}
             >
               {item.title}
@@ -65,7 +65,7 @@ export function ActionItemsList({ items, onAdd, onToggle, onRename, onDelete }: 
           )}
           <button
             onClick={() => onDelete(item.id)}
-            className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 text-xs transition-opacity"
+            className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 text-xs transition-opacity"
           >
             ✕
           </button>
@@ -74,7 +74,7 @@ export function ActionItemsList({ items, onAdd, onToggle, onRename, onDelete }: 
 
       <div className="flex items-center gap-2 pt-1">
         <input
-          className="flex-1 text-sm outline-none border-b border-slate-200 focus:border-slate-400 bg-transparent py-0.5 placeholder:text-slate-400"
+          className="flex-1 text-sm outline-none border-b border-white/10 focus:border-white/30 bg-transparent text-white py-0.5 placeholder:text-zinc-600 transition-colors"
           placeholder="+ Add action item"
           value={draft}
           onChange={e => setDraft(e.target.value)}
