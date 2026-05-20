@@ -3,18 +3,21 @@ import { useAuth } from '../hooks/useAuth'
 import { useCategories } from '../hooks/useCategories'
 import { useGoals } from '../hooks/useGoals'
 import { Header } from './Header'
-import { CategoryTabs } from './CategoryTabs'
 import { GoalsGrid } from './GoalsGrid'
+import { GoalSheet } from './GoalSheet'
 import { AddGoalFAB } from './AddGoalFAB'
 import type { Timeframe } from '../lib/types'
 
 export function BoardPage() {
   const { session } = useAuth()
-  const [timeframe, setTimeframe] = useState<Timeframe>('1year')
-  // 'all' = virtual All tab; a category id = filtered single-category view
-  const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
 
-  // Use empty string when session not yet resolved — hooks must always be called unconditionally
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [timeframe, setTimeframe] = useState<Timeframe>('1year')
+  const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
+  const [openGoalId, setOpenGoalId] = useState<string | null>(null)
+  const [addingGoal, setAddingGoal] = useState(false)
+
+  // Use empty string when session not yet resolved — hooks must always run unconditionally
   const userId = session?.user.id ?? ''
 
   const {
@@ -26,10 +29,13 @@ export function BoardPage() {
     moveGoalsToCategory,
   } = useCategories(userId)
 
-  // 'all' → fetch every goal; real id → fetch that category; null → skip (loading)
+  // 'all' → fetch every goal for this user+timeframe
+  // real id → fetch that category only
+  // null → skip (loading)
   const resolvedCategoryId: string | null =
-    activeCategoryId === 'all' ? 'all' :
-    activeCategoryId ?? categories[0]?.id ?? null
+    activeCategoryId === 'all'  ? 'all' :
+    activeCategoryId            ? activeCategoryId :
+                                  categories[0]?.id ?? null
 
   const isAllView = resolvedCategoryId === 'all'
 
@@ -39,15 +45,16 @@ export function BoardPage() {
     timeframe,
   )
 
-  // ALL early returns AFTER all hook calls
+  // ── All early returns AFTER all hook calls ─────────────────────────────────
   if (!session || catsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-900">
-        <div className="w-8 h-8 border-2 border-zinc-600 border-t-orange-500 rounded-full animate-spin" />
+      <div className="spinner-page">
+        <div className="spinner" />
       </div>
     )
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
   function hasGoals(categoryId: string) {
     return goals.some(g => g.category_id === categoryId)
   }
@@ -56,46 +63,81 @@ export function BoardPage() {
     ? 'All'
     : categories.find(c => c.id === resolvedCategoryId)?.name ?? ''
 
-  // FAB: in all-view, add to first real category
-  const firstCategoryId = categories[0]?.id ?? null
-  const fabCategoryId = isAllView ? firstCategoryId : (resolvedCategoryId as string | null)
-  const fabCategoryName = isAllView
-    ? (categories[0]?.name ?? '')
-    : activeCategoryName
-  const fabAddGoal = isAllView
-    ? (title: string, imageUrl: string | null) =>
-        firstCategoryId ? addGoalToCategory(firstCategoryId, title, imageUrl) : Promise.resolve()
-    : addGoal
+  // FAB add: in all-view, default to first real category; otherwise use active
+  const fabDefaultCategoryId = isAllView
+    ? (categories[0]?.id ?? null)
+    : (resolvedCategoryId as string | null)
+
+  async function handleFabAdd(title: string, imageUrl: string | null, catId: string) {
+    if (isAllView) {
+      await addGoalToCategory(catId, title, imageUrl)
+    } else {
+      await addGoal(title, imageUrl)
+    }
+  }
+
+  const openGoal = openGoalId ? goals.find(g => g.id === openGoalId) ?? null : null
 
   return (
-    <div className="min-h-screen bg-zinc-900">
-      <Header timeframe={timeframe} onTimeframeChange={setTimeframe} />
-      <CategoryTabs
-        categories={categories}
-        activeId={activeCategoryId}
-        onSelect={setActiveCategoryId}
-        onAdd={addCategory}
-        onRename={renameCategory}
-        onDelete={deleteCategory}
-        hasGoals={hasGoals}
-        onMoveGoals={moveGoalsToCategory}
-      />
-      <GoalsGrid
-        goals={goals}
-        userId={userId}
-        categoryName={activeCategoryName}
-        onUpdate={updateGoal}
-        onDelete={deleteGoal}
-        isAllView={isAllView}
-        categories={categories}
-      />
+    <>
+      <div className="topbar" />
+
+      <main className="app">
+        <Header
+          timeframe={timeframe}
+          onTimeframeChange={setTimeframe}
+          activeCategoryId={activeCategoryId}
+          onSelectCategory={setActiveCategoryId}
+          categories={categories}
+          onAddCategory={addCategory}
+          onRenameCategory={renameCategory}
+          onDeleteCategory={deleteCategory}
+          hasGoals={hasGoals}
+          onMoveGoals={moveGoalsToCategory}
+        />
+
+        <GoalsGrid
+          goals={goals}
+          onOpen={setOpenGoalId}
+          onAddClick={() => setAddingGoal(true)}
+          isAllView={isAllView}
+          categories={categories}
+          emptyLabel={`No goals yet in ${activeCategoryName}`}
+        />
+
+        <footer className="footnote no-print">
+          <span>Vision Board · {timeframe === '3months' ? '3-Month' : '1-Year'} View</span>
+          <em>make it happen</em>
+          <span>
+            {goals.length} goal{goals.length !== 1 ? 's' : ''}
+          </span>
+        </footer>
+      </main>
+
+      <div className="rail" />
+
+      {/* Goal detail sheet */}
+      {openGoal && (
+        <GoalSheet
+          goal={openGoal}
+          onClose={() => setOpenGoalId(null)}
+          onUpdate={updateGoal}
+          onDelete={id => { deleteGoal(id); setOpenGoalId(null) }}
+          userId={userId}
+          categories={categories}
+        />
+      )}
+
+      {/* FAB — AddGoalFAB renders the button + sheet */}
       <AddGoalFAB
         userId={userId}
-        activeCategoryId={fabCategoryId}
-        activeTimeframe={timeframe}
-        activeCategoryName={fabCategoryName}
-        onAdd={fabAddGoal}
+        defaultCategoryId={fabDefaultCategoryId}
+        timeframe={timeframe}
+        categories={categories}
+        onAdd={handleFabAdd}
+        open={addingGoal}
+        onOpenChange={setAddingGoal}
       />
-    </div>
+    </>
   )
 }

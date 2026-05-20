@@ -1,15 +1,29 @@
-// Fixed accent colours cycling by category array index.
-// Order matches default seeding: Health, Relationships, Career, Money, Personal Brand, …custom
+// Warm editorial accent palette — matches cream design system
+// Named colours by category convention, falling back to index-based cycling.
 
-export const CATEGORY_COLORS = [
-  '#f97316', // orange  — Health
-  '#818cf8', // indigo  — Relationships
-  '#eab308', // yellow  — Career
-  '#22c55e', // green   — Money
-  '#ec4899', // pink    — Personal Brand
-  '#06b6d4', // cyan    — custom overflow
+export const CATEGORY_NAME_COLORS: Record<string, string> = {
+  'Health':           '#D7642C',
+  'Relationships':    '#D6557A',
+  'Career':           '#4A4EE0',
+  'Money':            '#2E8C7A',
+  'Personal Brand':   '#1A1814',
+}
+
+const FALLBACK_COLORS = [
+  '#D7642C', // terracotta
+  '#4A4EE0', // indigo
+  '#2E8C7A', // teal
+  '#D6557A', // rose
+  '#1A1814', // ink
+  '#8B826F', // warm grey
 ] as const
 
+/** Resolve a category's accent color by name first, then by index. */
+export function getCategoryColor(name: string, index = 0): string {
+  return CATEGORY_NAME_COLORS[name] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length]
+}
+
+/** Legacy index-based accessor kept for backward compat. */
 export function categoryColor(index: number): string {
-  return CATEGORY_COLORS[index % CATEGORY_COLORS.length]
+  return FALLBACK_COLORS[index % FALLBACK_COLORS.length]
 }

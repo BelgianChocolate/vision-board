@@ -1,26 +1,48 @@
 import { useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Timeframe } from '../lib/types'
+import { getCategoryColor } from '../lib/categoryColors'
+import type { Category, Timeframe } from '../lib/types'
 
 interface AddGoalFABProps {
   userId: string
-  activeCategoryId: string | null
-  activeTimeframe: Timeframe
-  activeCategoryName: string
-  onAdd: (title: string, imageUrl: string | null) => Promise<void>
+  defaultCategoryId: string | null
+  timeframe: Timeframe
+  categories: Category[]
+  onAdd: (title: string, imageUrl: string | null, categoryId: string) => Promise<void>
+  /** Controlled open state — parent can open the sheet programmatically */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-const EMBER_GRADIENT = 'linear-gradient(135deg, #f97316, #ef4444)'
-
 export function AddGoalFAB({
-  userId, activeCategoryId, activeTimeframe, activeCategoryName, onAdd,
+  userId, defaultCategoryId, timeframe, categories, onAdd, open: openProp, onOpenChange,
 }: AddGoalFABProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp !== undefined ? openProp : internalOpen
+  const setOpen = (v: boolean) => {
+    setInternalOpen(v)
+    onOpenChange?.(v)
+  }
   const [title, setTitle] = useState('')
+  const [selectedCatId, setSelectedCatId] = useState<string>(
+    defaultCategoryId ?? categories[0]?.id ?? ''
+  )
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  function openSheet() {
+    setSelectedCatId(defaultCategoryId ?? categories[0]?.id ?? '')
+    setOpen(true)
+  }
+
+  function close() {
+    setOpen(false)
+    setTitle('')
+    setImageFile(null)
+    setImagePreview(null)
+  }
 
   function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -30,10 +52,11 @@ export function AddGoalFAB({
   }
 
   async function handleSave() {
-    if (!title.trim() || !activeCategoryId) return
+    const t = title.trim()
+    if (!t || !selectedCatId) return
     setSaving(true)
-    let imageUrl: string | null = null
 
+    let imageUrl: string | null = null
     if (imageFile) {
       const ext = imageFile.name.split('.').pop()
       const path = `${userId}/new-${Date.now()}.${ext}`
@@ -44,98 +67,136 @@ export function AddGoalFAB({
       }
     }
 
-    await onAdd(title.trim(), imageUrl)
-    setTitle('')
-    setImageFile(null)
-    setImagePreview(null)
+    await onAdd(t, imageUrl, selectedCatId)
     setSaving(false)
-    setOpen(false)
+    close()
   }
+
+  const selCat = categories.find(c => c.id === selectedCatId)
+  const selColor = selCat
+    ? getCategoryColor(selCat.name, categories.findIndex(c => c.id === selectedCatId))
+    : '#D7642C'
 
   return (
     <>
+      {/* FAB button */}
       <button
-        onClick={() => setOpen(true)}
-        className="no-print fixed bottom-6 right-6 z-10 w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-transform hover:scale-110 active:scale-95"
-        style={{ background: EMBER_GRADIENT }}
-        aria-label="Add goal"
+        className="fab no-print"
+        onClick={openSheet}
+        aria-label="Add new goal"
       >
-        +
+        <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+        </svg>
       </button>
 
+      {/* Add sheet */}
       {open && (
-        <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/60">
-          <div className="bg-zinc-800 border border-white/[0.08] w-full sm:w-96 rounded-t-3xl sm:rounded-2xl p-6 space-y-4 shadow-2xl">
-            <h2 className="font-semibold text-white">New Goal</h2>
-
-            <div>
-              <label className="text-sm font-medium text-zinc-400">Goal title</label>
-              <input
-                autoFocus
-                className="mt-1 w-full border border-white/[0.1] rounded-lg px-3 py-2 text-sm outline-none bg-zinc-700 text-white placeholder:text-zinc-500 focus:border-orange-500/50"
-                placeholder="e.g. Run a half marathon"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-zinc-400">Image (optional)</label>
-              {imagePreview ? (
-                <div className="relative mt-1 h-32 rounded-lg overflow-hidden">
-                  <img src={imagePreview} className="w-full h-full object-cover" alt="preview" />
-                  <button
-                    onClick={() => { setImageFile(null); setImagePreview(null) }}
-                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="mt-1 w-full h-24 border-2 border-dashed border-white/[0.1] rounded-lg text-sm text-zinc-500 hover:border-orange-500/50 hover:text-zinc-400 transition-colors"
-                >
-                  Click to upload
-                </button>
-              )}
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={pickFile}
-              />
-            </div>
-
-            <div className="text-xs text-zinc-500">
-              Adding to:{' '}
-              <span className="font-medium text-zinc-300">
-                {activeTimeframe === '1year' ? '1 Year' : '3 Months'}
+        <div className="scrim" onClick={close}>
+          <div
+            className="sheet"
+            onClick={e => e.stopPropagation()}
+            style={{ '--cat-accent': selColor } as React.CSSProperties}
+          >
+            {/* Header */}
+            <div className="sheet-head">
+              <span className="sheet-chip">
+                <span
+                  style={{
+                    width: 8, height: 8,
+                    background: selColor, borderRadius: 999,
+                    display: 'inline-block', flexShrink: 0,
+                  }}
+                />
+                New goal
               </span>
-              {activeCategoryName && (
-                <>
-                  {' '}·{' '}
-                  <span className="font-medium text-zinc-300">{activeCategoryName}</span>
-                </>
-              )}
+              <button className="sheet-close" onClick={close} aria-label="Close">
+                <svg width="14" height="14" viewBox="0 0 16 16">
+                  <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <button
-                className="flex-1 py-2 rounded-lg border border-white/[0.1] text-sm text-zinc-400 hover:bg-white/[0.06] transition-colors"
-                onClick={() => { setOpen(false); setTitle(''); setImageFile(null); setImagePreview(null) }}
-              >
+            {/* Hero: photo + meta */}
+            <div className="sheet-hero">
+              {/* Photo upload */}
+              <div className="sheet-photo" onClick={() => fileRef.current?.click()}>
+                {imagePreview ? (
+                  <>
+                    <img src={imagePreview} alt="" />
+                    <div className="sheet-change-photo">Change photo</div>
+                  </>
+                ) : (
+                  <div className="sheet-upload-cta">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M12 16V4M12 4l-4 4M12 4l4 4"
+                        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                      />
+                      <path
+                        d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"
+                        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+                      />
+                    </svg>
+                    <span>Add a photo</span>
+                    <span style={{ opacity: 0.6, fontSize: 9, letterSpacing: '0.12em' }}>OPTIONAL</span>
+                  </div>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                  onChange={pickFile}
+                />
+              </div>
+
+              {/* Meta */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <input
+                  autoFocus
+                  className="sheet-title"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
+                  placeholder="What do you want?"
+                />
+
+                {/* Category chips */}
+                <div className="cat-chips-row">
+                  {categories.map((c, i) => (
+                    <button
+                      key={c.id}
+                      className={`cat-chip-btn${selectedCatId === c.id ? ' active' : ''}`}
+                      style={{ '--c': getCategoryColor(c.name, i) } as React.CSSProperties}
+                      onClick={() => setSelectedCatId(c.id)}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+
+                <p style={{
+                  fontFamily: 'var(--f-mono)', fontSize: 10,
+                  letterSpacing: '0.16em', textTransform: 'uppercase',
+                  color: 'var(--ink-faint)', margin: 0,
+                }}>
+                  {timeframe === '1year' ? '1-Year' : '3-Month'} goal
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="sheet-foot">
+              <button className="btn-text" onClick={close}>
                 Cancel
               </button>
               <button
-                className="flex-1 py-2 rounded-lg text-white text-sm disabled:opacity-40 transition-opacity"
-                style={{ background: EMBER_GRADIENT }}
+                className="btn-primary accent"
                 onClick={handleSave}
                 disabled={saving || !title.trim()}
               >
-                {saving ? 'Saving…' : 'Add Goal'}
+                {saving ? 'Saving…' : 'Pin it to the board'}
               </button>
             </div>
           </div>

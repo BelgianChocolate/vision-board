@@ -66,7 +66,7 @@ export function useGoals(userId: string, categoryId: string | null, timeframe: T
     if (data) setGoals(prev => [...prev, data])
   }
 
-  const updateGoal = async (id: string, patch: Partial<Pick<Goal, 'title' | 'image_url'>>) => {
+  const updateGoal = async (id: string, patch: Partial<Pick<Goal, 'title' | 'image_url' | 'category_id'>>) => {
     await supabase.from('goals').update(patch).eq('id', id)
     setGoals(prev => prev.map(g => g.id === id ? { ...g, ...patch } : g))
   }
